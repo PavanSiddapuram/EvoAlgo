@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evoalgo"
+version = "0.1.0"
+description = "LLM-Driven Evolutionary Algorithm Discovery System"
+readme = "README.md"
+authors = [{ name = "Pavan Siddapuram" }]
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.5.0",
+    "numpy>=1.26.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "psutil>=5.9.0",
+    "google-generativeai>=0.4.0",
+    "openai>=1.14.0",
+    "anthropic>=0.19.0",
+    "rich>=13.7.0",
+    "pyyaml>=6.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-benchmark>=4.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
