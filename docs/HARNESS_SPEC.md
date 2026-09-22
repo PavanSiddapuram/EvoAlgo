@@ -1,12 +1,16 @@
 # 🧪 EvoAlgo: Problem Harness & Evaluation Specification
 
-This specification defines the contract between the **EvoAlgo Core Engine** and any **Problem Domain**, focusing on the flagship domain: **Cache Replacement Policy Discovery**.
+This specification defines the contract between the **EvoAlgo Core Engine** and any **Problem Domain**, outlining the harness protocols for:
+1. **Tier 1: Systems Cache Replacement Policy Discovery**
+2. **Tier 2: LLM KV-Cache Eviction & Compression Discovery**
+3. **Co-Evolutionary Adversarial Workload Fuzzing**
+4. **Fast-Path Pre-Execution Filtering**
 
 ---
 
 ## 1. The `BaseProblem` Interface
 
-Every domain in EvoAlgo must subclass `BaseProblem` to provide a uniform abstraction for problem specification, baseline provision, verification, and evaluation.
+Every domain in EvoAlgo must subclass `BaseProblem` to provide a uniform abstraction:
 
 ```python
 from abc import ABC, abstractmethod
@@ -15,6 +19,7 @@ from pydantic import BaseModel
 
 class ProblemSpec(BaseModel):
     name: str
+    tier: str                                  # "tier_1_systems" | "tier_2_ai_systems"
     description: str
     target_interface: str                      # Expected class name and signature
     objective_names: List[str]                 # e.g., ["hit_ratio", "latency_us", "memory_kb"]
@@ -28,30 +33,35 @@ class BaseProblem(ABC):
 
     @abstractmethod
     def get_baselines(self) -> Dict[str, str]:
-        """Returns reference human-written implementations (e.g., {'LRU': code, 'FIFO': code})."""
+        """Returns reference implementations (e.g. {'LRU': code, 'FIFO': code, 'ARC': code})."""
+        pass
+
+    @abstractmethod
+    def verify_fast_gate(self, code: str) -> Tuple[bool, str]:
+        """Tier 1: Fast AST inspection and complexity check (<10ms)."""
         pass
 
     @abstractmethod
     def verify_invariants(self, candidate_class: Any) -> Tuple[bool, str]:
-        """Runs fast sanity tests against candidate class to verify behavioral contracts."""
+        """Tier 2: Sanity tests against candidate class to verify behavioral contracts."""
         pass
 
     @abstractmethod
     def run_training_evaluation(self, candidate_class: Any) -> Dict[str, Any]:
-        """Executes candidate against training workload distributions."""
+        """Tier 3: Executes candidate against training workload distributions."""
         pass
 
     @abstractmethod
     def run_validation_evaluation(self, candidate_class: Any) -> Dict[str, Any]:
-        """Executes candidate against held-out/unseen validation distributions."""
+        """Tier 3 (Held-out): Executes candidate against unseen validation distributions."""
         pass
 ```
 
 ---
 
-## 2. Cache Replacement Policy Contract
+## 2. Tier 1: Cache Replacement Policy Contract
 
-For the flagship domain `cache_replacement`, all evolved algorithms must implement the `BaseCache` class interface:
+For `cache_replacement`, all evolved algorithms must implement the `BaseCache` class interface:
 
 ```python
 class BaseCache(ABC):
@@ -87,8 +97,7 @@ class BaseCache(ABC):
 
 ## 3. Invariant Verification Rules (Tier 2 Sanity Checks)
 
-Before running computationally expensive workloads, the harness executes deterministic invariant tests:
-1. **Capacity Invariant**: The cache must never store more than `capacity` items at any point in time.
+1. **Capacity Invariant**: At no point may the number of items stored exceed `capacity`.
 2. **Hit Correctness Invariant**: If key `X` was inserted and has not been evicted, `get(X)` must return `True`.
 3. **Eviction Validity Invariant**: When `put(Y)` causes an eviction, the returned evicted key `E` must have actually resided in the cache prior to eviction.
 4. **Zero / Unity Edge Cases**: Behavior on `capacity = 1` must remain deterministic without crashing or infinite loops.
@@ -96,47 +105,46 @@ Before running computationally expensive workloads, the harness executes determi
 
 ---
 
-## 4. Workload Simulator Protocol
+## 4. Adversarial Workload Fuzzing Contract
 
-Workload execution feeds an array of keys into the candidate cache instance:
+In addition to standard synthetic traces (Zipfian, Sequential, Cyclic), the harness includes an **Adversarial Trace Fuzzer**:
 
 ```python
-def simulate_trace(cache: BaseCache, trace: List[int]) -> SimulationMetrics:
-    hits = 0
-    misses = 0
-    evictions = 0
-    
-    start_time = time.perf_counter_ns()
-    
-    for key in trace:
-        is_hit = cache.get(key)
-        if is_hit:
-            hits += 1
-        else:
-            misses += 1
-            evicted = cache.put(key)
-            if evicted is not None:
-                evictions += 1
-                
-    total_time_ns = time.perf_counter_ns() - start_time
-    total = hits + misses
-    hit_ratio = hits / total if total > 0 else 0.0
-    avg_latency_us = (total_time_ns / total) / 1000.0 if total > 0 else 0.0
-    
-    return SimulationMetrics(
-        hits=hits,
-        misses=misses,
-        evictions=evictions,
-        hit_ratio=hit_ratio,
-        avg_latency_us=avg_latency_us
-    )
+class AdversarialWorkloadGenerator:
+    """
+    Generates dynamic adversarial access patterns to induce cache thrashing.
+    Mutates loop length, stride step, and phase shift frequency.
+    """
+    def generate_adversarial_trace(
+        self,
+        capacity: int,
+        length: int,
+        adversarial_seed: int
+    ) -> List[int]: ...
 ```
 
 ---
 
-## 5. Benchmarking & Noise Mitigation
+## 5. Tier 2: LLM KV-Cache Eviction & Compression Interface
 
-To ensure reliable, non-noisy metrics:
-* **Micro-benchmarks use synthetic traces with fixed seeds**: Trace generation uses `random.Random(42)` and `numpy.random.default_rng(42)`.
-* **Execution Environment Warmup**: An initial dummy trace of 500 items is run to warm up JIT/bytecode compilation paths before recording latency metrics.
-* **Aggregated Statistics**: High-resolution latency profiling executes 5 repeated passes; metrics report the **median** and **p99** latency to discard OS context-switch spikes.
+For `llm_kv_cache`, algorithms implement the `BaseKVCachePolicy` interface:
+
+```python
+class BaseKVCachePolicy(ABC):
+    def __init__(self, max_tokens: int):
+        self.max_tokens = max_tokens
+
+    @abstractmethod
+    def step(
+        self,
+        token_id: int,
+        layer_idx: int,
+        attention_vector: List[float]
+    ) -> int | None:
+        """
+        Called on each generated token.
+        `attention_vector`: Attention weights from the current query to all stored tokens.
+        Returns the token index to evict if cache is at capacity, else None.
+        """
+        pass
+```

@@ -6,7 +6,9 @@
 
 > **"Don't ask an LLM to write a better algorithm. Treat the algorithm as an organism, and use the LLM as the mutation operator."**
 
-EvoAlgo is an evolutionary coding framework where Large Language Models (LLMs) act as guided mutation and crossover operators across an evolving population of algorithmic candidates. Candidates are continuously compiled, executed inside an isolated sandbox, benchmarked against multi-distribution workload suites, and ranked using multi-objective Pareto optimization.
+EvoAlgo is an evolutionary coding framework where Large Language Models (LLMs) act as guided mutation and crossover operators across an evolving population of algorithmic candidates. Candidates are continuously compiled, executed inside an isolated sandbox, benchmarked against multi-distribution workload suites, and ranked using multi-objective Pareto optimization and MAP-Elites quality-diversity archives.
+
+The engine spans both **Systems Infrastructure** (cache eviction, job scheduling, memory managers) and **Frontier AI/ML & LLM Systems** (KV-cache compression, MoE token routing, speculative decoding verification, and symbolic optimizers).
 
 ---
 
@@ -14,6 +16,8 @@ EvoAlgo is an evolutionary coding framework where Large Language Models (LLMs) a
 - [Problem Statement](#-problem-statement)
 - [The Core Thesis: First Principles](#-the-core-thesis-first-principles)
 - [The Evolutionary Loop](#-the-evolutionary-loop)
+- [Frontier Capabilities](#-frontier-capabilities)
+- [Research Wedges: Systems & AI/ML Systems](#-research-wedges-systems--aiml-systems)
 - [The Algorithm as an Organism](#-the-algorithm-as-an-organism)
 - [Mutation & Crossover Operators](#-mutation--crossover-operators)
 - [Population Dynamics & Island Model](#-population-dynamics--island-model)
@@ -22,7 +26,7 @@ EvoAlgo is an evolutionary coding framework where Large Language Models (LLMs) a
 - [Generalization: Train vs. Hidden Workloads](#-generalization-train-vs-hidden-workloads)
 - [System Architecture](#-system-architecture)
 - [Repository Structure](#-repository-structure)
-- [Roadmap](#-roadmap)
+- [Phased Roadmap](#-phased-roadmap)
 
 ---
 
@@ -54,7 +58,8 @@ $$\text{Algorithmic Discovery} = \text{LLM Semantic Prior} \times \text{Evolutio
   │                                                         │
   │   [Evolutionary Topology]       [Empirical Ground Truth]│
   │    • Multi-Island Speciation     • Subprocess Sandbox   │
-  │    • Pareto Non-Domination       • Multi-Workload Suite │
+  │    • MAP-Elites Quality Diversity• Multi-Workload Suite │
+  │    • Pareto Non-Domination       • Co-Evolving Fuzzers  │
   │    • Cross-Gen Migration         • Profiling & Counters │
   └────────────────────────────┬────────────────────────────┘
                                │
@@ -63,8 +68,49 @@ $$\text{Algorithmic Discovery} = \text{LLM Semantic Prior} \times \text{Evolutio
 ```
 
 1. **The LLM provides semantic-preserving code mutations**: Instead of random token flips, the LLM makes structured edits with full awareness of program logic, invariants, and syntax.
-2. **Evolutionary search navigates high-dimensional trade-offs**: By keeping a diverse population across multiple islands, the system avoids local optima and preserves promising sub-heuristics.
+2. **Evolutionary search navigates high-dimensional trade-offs**: By keeping a diverse population across multiple islands and behavioral niches, the system avoids local optima.
 3. **The sandbox enforces ground truth**: No hallucinated speedups survive. The evaluator measures exact cache hit rates, CPU cycles, and memory overheads.
+
+---
+
+## 🚀 Frontier Capabilities
+
+EvoAlgo incorporates 5 frontier evolutionary and systems design patterns:
+
+### 1. 🗺️ MAP-Elites Behavioral Archive (Multi-Dimensional Diversity)
+Instead of collapsing all candidates into a single scalar or 1D leaderboard, EvoAlgo constructs a multi-dimensional behavioral feature grid (e.g. *Memory Overhead $\times$ Code Complexity $\times$ Strategy Family*). Each niche cell stores only the highest-fitness individual for that specific behavior, ensuring the population never converges prematurely.
+
+### 2. 🦹 Co-Evolutionary Adversarial Workload Fuzzing
+Humans write predictable benchmarks (pure Zipfian, linear scans). EvoAlgo co-evolves a secondary population of **Adversarial Access Traces** that specifically mutate to maximize miss rates against the current elite algorithms, hunting down pathological thrashing edge cases.
+
+### 3. 🎯 Multi-Armed Bandit (MAB) Adaptive Mutation Router
+Rather than uniform mutation probabilities, a Thompson Sampling / MAB controller tracks which mutation operators (Optimization, Structural, Algorithmic, Crossover) yield surviving offspring at generation $g$ and dynamically adapts selection probabilities.
+
+### 4. ⚡ Fast-Path Pre-Execution Filtering (<10ms Gating)
+Before launching full subprocess sandbox simulations, a lightweight static and AST analyzer verifies interface adherence, checks cyclic invariants, and filters out dead or trivial algorithms.
+
+### 5. ⚙️ Native Code Compilation / Export Pipeline (Python $\to$ C++20)
+Symbolic algorithms are discovered in readable Python, but top Pareto/MAP-Elites performers are exported and compiled directly to C++20 for microsecond-scale production deployment (e.g., Redis, RocksDB, or custom storage engines).
+
+---
+
+## 🔬 Research Wedges: Systems & AI/ML Systems
+
+EvoAlgo's discovery engine is designed to span both core systems and AI/ML infrastructure:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                EVOALGO RESEARCH WEDGES                                  │
+├─────────────────────────────────────────┬───────────────────────────────────────────────┤
+│        Track A: Systems Infrastructure  │         Track B: AI/ML & LLM Systems          │
+├─────────────────────────────────────────┼───────────────────────────────────────────────┤
+│ • Cache Replacement Policies (LRU/ARC)  │ • LLM KV Cache Eviction & Compression         │
+│ • Task & Thread Scheduling (Work stealing)│ • Mixture-of-Experts (MoE) Token Routing    │
+│ • Storage & Buffer Pool Managers        │ • Speculative Decoding Acceptance Trees       │
+│ • Lockless Memory Allocators            │ • Symbolic Optimizers & LR Schedulers (Lion)  │
+│ • Compression Dictionary Selectors      │ • Dynamic Sparse Attention Skip-Masks         │
+└─────────────────────────────────────────┴───────────────────────────────────────────────┘
+```
 
 ---
 
@@ -196,10 +242,10 @@ The LLM is prompted via targeted operator templates rather than generic open-end
 
 ## 🏝️ Population Dynamics & Island Model
 
-A single homogeneous population quickly converges to a local optimum (e.g., everyone mutates around standard LRU). EvoAlgo implements an **Island Topology with Speciation**:
+A single homogeneous population quickly converges to a local optimum. EvoAlgo implements an **Island Topology with Speciation**:
 
 ```
-                       Global Archive / Pareto Front
+                       Global Archive / MAP-Elites Grid
                                      ▲
                                      │
                  ┌───────────────────┼───────────────────┐
@@ -215,15 +261,15 @@ A single homogeneous population quickly converges to a local optimum (e.g., ever
 ```
 
 * **Speciation**: Each island is seeded with distinct paradigms and guided by specialized prompts.
-* **Migration Policy**: Every $N$ generations, the top $k$ non-dominated candidates from each island migrate to adjacent islands, breaking local plateaus.
+* **Migration Policy**: Every $N$ generations, top non-dominated candidates from each island migrate to adjacent islands.
 
 ---
 
 ## 📊 The Evaluator & Pareto Frontier
 
-Real algorithms involve trade-offs. EvoAlgo evaluates candidates across multiple objectives using **NSGA-II** (Non-dominated Sorting Genetic Algorithm II) principles:
+EvoAlgo evaluates candidates across multiple objectives using **NSGA-II** principles:
 
-$$\text{Objective Vector } \vec{F} = \Big( \text{Correctness } (\%), \text{Hit Ratio } (\%), -\text{Eviction Latency } (\mu\text{s}), -\text{Memory Overhead } (\text{KB}) \Big)$$
+$$\vec{F} = \Big( \text{Correctness } (\%), \text{Hit Ratio } (\%), -\text{Eviction Latency } (\mu\text{s}), -\text{Memory Overhead } (\text{KB}) \Big)$$
 
 ```
 Eviction Latency
@@ -236,20 +282,17 @@ Eviction Latency
    └─────────────────────────────────────► Cache Hit Ratio
 ```
 
-A candidate $A$ dominates $B$ ($A \succ B$) if:
-$$\forall i \in \{1,\dots,m\}, \quad F_i(A) \ge F_i(B) \quad \land \quad \exists j \in \{1,\dots,m\}, \quad F_j(A) > F_j(B)$$
-
-Candidates on the **Pareto Frontier** are preserved in the Global Archive, guaranteeing diversity across both ultra-low-latency and maximum-efficiency regimes.
+Candidates on the **Pareto Frontier** and **MAP-Elites cells** are preserved in the Global Archive, guaranteeing diversity across both ultra-low-latency and maximum-efficiency regimes.
 
 ---
 
-## ⚡ Flagship Pilot Problem: Cache Replacement
+## ⚡ Flagship Pilot Problem: Cache Replacement (Tier 1)
 
 Why Cache Replacement over standard Sorting?
 1. **Determinism**: Fully reproducible simulated workloads with discrete step counters.
 2. **Clear Baselines**: LRU, FIFO, LFU, 2Q, ARC.
 3. **Rich Algorithmic Space**: Frequency, recency, ghost caches, bloom filters, and adaptive decay curves.
-4. **Systems Relevance**: Directly mirrors real-world optimization problems solved in systems infrastructure (e.g., Google AlphaEvolve cache policies).
+4. **Systems Relevance**: Direct bridge into systems infrastructure and downstream LLM KV-cache eviction.
 
 ### Workload Suite
 - **Workload A (Zipfian)**: Skewed access patterns modeling web traffic and key-value stores.
@@ -257,6 +300,7 @@ Why Cache Replacement over standard Sorting?
 - **Workload C (Cyclic / Loop)**: Working set slightly larger than capacity (tests LRU thrashing).
 - **Workload D (Phase Shift)**: Sudden distribution change from one cluster of keys to another.
 - **Workload E (Bursty)**: High-frequency bursts of temporal access interspersed with random noise.
+- **Workload F (Adversarial Fuzzer)**: Co-evolved synthetic access patterns designed to induce thrashing.
 
 ---
 
@@ -277,7 +321,6 @@ To prevent the LLM from overfitting or hardcoding heuristics to a specific synth
 
 The system measures the **Generalization Gap**:
 $$\Delta_{\text{gen}} = \text{Fitness}_{\text{train}} - \text{Fitness}_{\text{val}}$$
-Candidates with high $\Delta_{\text{gen}}$ are penalized to favor robust, general-purpose policies over brittle overfits.
 
 ---
 
@@ -308,7 +351,7 @@ Candidates with high $\Delta_{\text{gen}}$ are penalized to favor robust, genera
 ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
 │  Generator  │  │  Evaluator  │  │  Selector   │
 │  • LLM API  │  │  • Runner   │  │  • NSGA-II  │
-│  • Prompts  │  │  • Sandbox  │  │  • Archive  │
+│  • Prompts  │  │  • Sandbox  │  │  • MAP-Elite│
 │  • Parsers  │  │  • Profiler │  │  • Migrator │
 └─────────────┘  └─────────────┘  └─────────────┘
 ```
@@ -323,10 +366,12 @@ EvoAlgo/
 │   ├── core/                  # Genotype, Phenotype, Individual, Population
 │   │   ├── genome.py
 │   │   ├── individual.py
+│   │   ├── map_elites.py      # Quality-diversity feature grid
 │   │   └── population.py
 │   ├── evolution/             # Evolutionary operators & dynamics
 │   │   ├── selection.py       # Pareto ranking, NSGA-II crowding distance
 │   │   ├── mutation.py        # 4 mutation operators + prompt dispatch
+│   │   ├── bandit.py          # Thompson Sampling mutation router
 │   │   ├── crossover.py       # Two-parent hybrid synthesis
 │   │   └── islands.py         # Multi-island topology & migration schedules
 │   ├── evaluator/             # Multi-tier verification & execution harness
@@ -343,14 +388,15 @@ EvoAlgo/
 │       └── models.py
 ├── problems/
 │   ├── base.py                # Abstract BaseProblem interface
-│   ├── cache_replacement/     # Flagship Pilot Domain
+│   ├── cache_replacement/     # Flagship Pilot Domain (Tier 1)
 │   │   ├── problem.py
 │   │   ├── simulator.py
-│   │   ├── workloads.py       # Synthetic and real-world trace generators
+│   │   ├── workloads.py       # Synthetic, trace, and adversarial generators
 │   │   └── baselines/         # FIFO, LRU, LFU, ARC
-│   └── sorting/               # Sanity Verification Domain
+│   └── llm_kv_cache/          # LLM Systems Domain (Tier 2)
 │       ├── problem.py
-│       └── baselines/         # Bubble, Insertion, Quick, Merge
+│       ├── attention_trace.py # Attention score traces from LLaMA/Mistral
+│       └── baselines/         # StreamingLLM, H2O, SnapKV
 ├── experiments/
 │   ├── configs/               # YAML experiment definitions
 │   └── runs/                  # Artifact logs and metrics
@@ -363,20 +409,22 @@ EvoAlgo/
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Phased Roadmap
 
 - [x] **Phase 0: Specifications & First Principles**
-  - Problem Statement, Architecture Blueprint, and Harness Specifications.
-- [ ] **Phase 1: Problem Harness & Simulator Ground Truth**
-  - `BaseProblem` abstraction, Cache Replacement simulator, workload generator suite (Zipf, Scans, Phase-shifts), and baseline implementations (FIFO, LRU, LFU).
+  - Problem Statement, Architecture Blueprint, Frontier Capabilities, AI/ML Wedges, and Harness Specifications.
+- [ ] **Phase 1: Tier 1 Problem Harness (Cache Replacement Ground Truth)**
+  - `BaseProblem` abstraction, Cache Replacement simulator, multi-distribution workload suite, adversarial fuzzer, and baselines (FIFO, LRU, LFU, ARC).
 - [ ] **Phase 2: Evaluator Pipeline & Sandboxed Runner**
   - Subprocess runner with hard CPU/memory/timeout limits, syntax validation, invariant test suite, and fitness metrics calculation.
 - [ ] **Phase 3: LLM Mutation Engine & Code Parser**
-  - Multi-provider LLM interface (Gemini / Anthropic / OpenAI), 5 mutation prompt operators, and robust code-block AST parser.
-- [ ] **Phase 4: Evolutionary Core & Island Topology**
-  - Population management, Pareto frontier archive, NSGA-II selection, and multi-island migration loop.
-- [ ] **Phase 5: Flagship Experiment & Laboratory Dashboard**
+  - Multi-provider LLM interface (Gemini / Anthropic / OpenAI), 5 mutation prompt operators, Thompson Sampling bandit dispatcher, and robust code-block AST parser.
+- [ ] **Phase 4: Evolutionary Core, MAP-Elites & Island Topology**
+  - Population management, Pareto frontier archive, MAP-Elites behavioral grid, NSGA-II selection, and multi-island migration loop.
+- [ ] **Phase 5: Tier 1 Flagship Experiment & Laboratory Dashboard**
   - Complete 20-generation evolutionary run on cache replacement, lineage tree visualization, and code diff trajectory tracking.
+- [ ] **Phase 6: Tier 2 AI/ML Wedge (LLM KV-Cache Eviction Discovery)**
+  - Dynamic token retention heuristic discovery tested against real attention weight matrices.
 
 ---
 
